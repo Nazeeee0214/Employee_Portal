@@ -1,20 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Filter, Download, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const logs = [
-  { date: "Oct 24, 2023", clockIn: "08:54 AM", clockOut: "06:12 PM", hours: "09:18", status: "Regular" },
-  { date: "Oct 23, 2023", clockIn: "09:02 AM", clockOut: "05:45 PM", hours: "08:43", status: "Late" },
-  { date: "Oct 22, 2023", clockIn: "08:45 AM", clockOut: "06:30 PM", hours: "09:45", status: "Regular" },
-  { date: "Oct 21, 2023", clockIn: "08:50 AM", clockOut: "06:05 PM", hours: "09:15", status: "Regular" },
-  { date: "Oct 20, 2023", clockIn: "-- : --", clockOut: "-- : --", hours: "00:00", status: "On Leave" },
-  { date: "Oct 19, 2023", clockIn: "08:58 AM", clockOut: "06:15 PM", hours: "09:17", status: "Regular" },
-];
+import { AttendanceLogEntry, fetchRecentLogs } from "../services/attendance.service";
 
-export function AttendanceLogs() {
+interface AttendanceLogsProps {
+  logs: AttendanceLogEntry[];
+}
+
+export function AttendanceLogs({ logs: initialLogs }: AttendanceLogsProps) {
+  const [logs, setLogs] = useState<AttendanceLogEntry[]>(initialLogs);
+  const [offset, setOffset] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(initialLogs.length === 10);
+
+  const handleLoadMore = async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const moreLogs = await fetchRecentLogs(offset);
+      if (moreLogs.length < 10) setHasMore(false);
+      setLogs((prev) => [...prev, ...moreLogs]);
+      setOffset((prev) => prev + 10);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
@@ -49,7 +66,7 @@ export function AttendanceLogs() {
           <tbody className="divide-y divide-zinc-100/50 dark:divide-zinc-800/30">
             {logs.map((log, index) => (
               <motion.tr 
-                key={log.date}
+                key={log.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -63,13 +80,13 @@ export function AttendanceLogs() {
                   <div className="flex items-center justify-end gap-3">
                     <span className={cn(
                       "text-[10px] font-black uppercase tracking-tighter transition-colors",
-                      log.status === "Late" ? "text-amber-600" : log.status === "On Leave" ? "text-primary/50" : "text-zinc-400"
+                      log.status === "Late" ? "text-amber-600" : (log.status === "Leave" || log.status === "Holiday") ? "text-primary/50" : "text-zinc-400"
                     )}>
                       {log.status}
                     </span>
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      log.status === "Late" ? "bg-amber-500" : log.status === "On Leave" ? "bg-primary/20" : "bg-zinc-200 dark:bg-zinc-700"
+                      log.status === "Late" ? "bg-amber-500" : (log.status === "Leave" || log.status === "Holiday") ? "bg-primary/20" : "bg-zinc-200 dark:bg-zinc-700"
                     )} />
                   </div>
                 </td>
@@ -80,9 +97,19 @@ export function AttendanceLogs() {
       </div>
       
       <div className="px-8 py-5 bg-zinc-50/50 dark:bg-zinc-900/30 flex justify-center border-t border-outline-variant/10">
-        <button className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-primary transition-all">
-          Load More History
-        </button>
+        {hasMore ? (
+          <button 
+            onClick={handleLoadMore}
+            disabled={loading}
+            className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-primary transition-all disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Load More History"}
+          </button>
+        ) : (
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 dark:text-zinc-700">
+            End of History
+          </span>
+        )}
       </div>
 
       {/* Sync Alert */}

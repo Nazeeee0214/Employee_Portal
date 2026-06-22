@@ -5,8 +5,13 @@ import { motion } from "framer-motion";
 import { AttendanceStats } from "./components/AttendanceStats";
 import { FilingForm } from "./components/FilingForm";
 import { AttendanceLogs } from "./components/AttendanceLogs";
+import { AttendanceLogEntry } from "./services/attendance.service";
 
-export function AttendancePage() {
+interface AttendancePageProps {
+  initialLogs: AttendanceLogEntry[];
+}
+
+export function AttendancePage({ initialLogs }: AttendancePageProps) {
   return (
     <div className="space-y-10">
       <header>
@@ -34,7 +39,7 @@ export function AttendancePage() {
           <FilingForm />
         </div>
         <div className="col-span-12 lg:col-span-7">
-          <AttendanceLogs />
+          <AttendanceLogs logs={initialLogs} />
         </div>
       </div>
     </div>

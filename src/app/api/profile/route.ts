@@ -27,6 +27,18 @@ export async function POST(req: NextRequest) {
 
       const folderName = "hr_attachments";
       const cookieHeader = req.headers.get("cookie") || "";
+      const directusToken = process.env.DIRECTUS_API_BASE_TOKEN;
+
+      const getHeaders = (extra: Record<string, string> = {}) => {
+        const headers: Record<string, string> = {
+          "cookie": cookieHeader,
+          ...extra,
+        };
+        if (directusToken) {
+          headers["Authorization"] = `Bearer ${directusToken}`;
+        }
+        return headers;
+      };
 
       let folderId = "";
 
@@ -39,7 +51,7 @@ export async function POST(req: NextRequest) {
         }).toString();
 
         const folderSearchRes = await fetch(`${API_BASE}/folders?${folderQuery}`, {
-          headers: { "cookie": cookieHeader },
+          headers: getHeaders(),
         });
         
         const folderSearch = await folderSearchRes.json();
@@ -50,10 +62,7 @@ export async function POST(req: NextRequest) {
           // 2. Create the folder if not found
           const createFolderRes = await fetch(`${API_BASE}/folders`, {
             method: "POST",
-            headers: {
-              "cookie": cookieHeader,
-              "Content-Type": "application/json",
-            },
+            headers: getHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ name: folderName }),
           });
           const createdFolder = await createFolderRes.json();
@@ -79,7 +88,7 @@ export async function POST(req: NextRequest) {
       // 4. Forward to /files
       const response = await fetch(`${API_BASE}/files`, {
         method: "POST",
-        headers: { "cookie": cookieHeader },
+        headers: getHeaders(),
         body: outgoingFormData,
       });
 

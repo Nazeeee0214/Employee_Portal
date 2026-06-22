@@ -4,6 +4,18 @@ import { getSession } from "@/modules/auth/auth/services/auth";
 import { revalidatePath } from "next/cache";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+const directusToken = process.env.DIRECTUS_API_BASE_TOKEN;
+
+function getHeaders(extra: Record<string, string> = {}) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...extra,
+  };
+  if (directusToken) {
+    headers["Authorization"] = `Bearer ${directusToken}`;
+  }
+  return headers;
+}
 
 // Anti-DDoS Rate Limiter (5 seconds per action)
 const rateLimitCache = new Map<number, number>();
@@ -20,7 +32,7 @@ async function getUserDepartment(userId: number) {
   try {
     const res = await fetch(`${API_BASE}/items/user?filter[user_id][_eq]=${userId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" }
+      headers: getHeaders()
     });
     if (res.ok) {
       const { data } = await res.json();
@@ -89,7 +101,7 @@ export async function submitLeaveRequest(formData: FormData) {
 
   const res = await fetch(`${API_BASE}/items/leave_request`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(payload)
   });
 
@@ -135,7 +147,7 @@ export async function submitOvertimeRequest(formData: FormData) {
 
   const res = await fetch(`${API_BASE}/items/overtime_request`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(payload)
   });
 
@@ -180,7 +192,7 @@ export async function submitUndertimeRequest(formData: FormData) {
 
   const res = await fetch(`${API_BASE}/items/undertime_request`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(payload)
   });
 

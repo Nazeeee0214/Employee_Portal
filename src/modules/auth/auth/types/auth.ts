@@ -5,4 +5,5 @@ export interface UserSession {
   role: string | null;
   image: string | null;
   isAdmin: boolean;
+  expires?: Date;
 }

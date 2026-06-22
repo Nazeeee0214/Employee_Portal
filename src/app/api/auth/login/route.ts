@@ -26,11 +26,16 @@ export async function POST(request: Request) {
 
     const DIRECTUS_URL = `${API_BASE}/items/user?filter[user_email][_eq]=${encodeURIComponent(email)}`;
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (process.env.DIRECTUS_API_BASE_TOKEN) {
+      headers["Authorization"] = `Bearer ${process.env.DIRECTUS_API_BASE_TOKEN}`;
+    }
+
     const response = await fetch(DIRECTUS_URL, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       next: { revalidate: 0 } // Disable caching for auth
     });
 

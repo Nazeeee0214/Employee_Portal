@@ -2,7 +2,8 @@ import { getSession } from "@/modules/auth/auth/services/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-export interface NetPayData {
+export interface SalaryData {
+  gross_pay: number;
   net_pay: number;
   cutoff_end: string;
 }
@@ -23,25 +24,60 @@ export async function fetchDashboardData() {
 
   const userId = session.userId;
   
-  // 1. Fetch Latest Net Pay
-  let netPay: NetPayData | null = null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.DIRECTUS_API_BASE_TOKEN) {
+    headers["Authorization"] = `Bearer ${process.env.DIRECTUS_API_BASE_TOKEN}`;
+  }
+  
+  // 1. Calculate Estimated Salary based on attendance logs and wage management
+  let salaryData: SalaryData | null = null;
   try {
-    const payRes = await fetch(`${API_BASE}/items/payroll_run_employee?filter[user_id][_eq]=${userId}&sort=-cutoff_end&limit=1`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      next: { revalidate: 60 }
-    });
-    if (payRes.ok) {
-      const { data } = await payRes.json();
-      if (data && data.length > 0) {
-        netPay = {
-          net_pay: parseFloat(data[0].net_pay || "0"),
-          cutoff_end: data[0].cutoff_end || ""
-        };
+    
+    // a. Fetch current open cutoff
+    const cutoffRes = await fetch(`${API_BASE}/items/cutoff_settings?filter[period_status][_eq]=OPEN&limit=1`, { headers });
+    let currentCutoff: any = null;
+    if (cutoffRes.ok) {
+      const { data } = await cutoffRes.json();
+      if (data && data.length > 0) currentCutoff = data[0];
+    }
+
+    // b. Fetch daily wage
+    const wageRes = await fetch(`${API_BASE}/items/user_wage_management?filter[user_id][_eq]=${userId}&limit=1`, { headers });
+    let dailyWage = 0;
+    if (wageRes.ok) {
+      const { data } = await wageRes.json();
+      if (data && data.length > 0) dailyWage = parseFloat(data[0].daily_wage || "0");
+    }
+
+    if (currentCutoff && dailyWage > 0) {
+      // c. Fetch attendance logs within cutoff
+      const start = currentCutoff.start_date;
+      const end = currentCutoff.end_date;
+      const attRes = await fetch(`${API_BASE}/items/attendance_log?filter[user_id][_eq]=${userId}&filter[log_date][_gte]=${start}&filter[log_date][_lte]=${end}`, { headers });
+      
+      let estimatedGrossPay = 0;
+      if (attRes.ok) {
+        const { data } = await attRes.json();
+        let daysWorked = 0;
+        data?.forEach((log: any) => {
+          if (log.status === "Half Day") {
+            daysWorked += 0.5;
+          } else if (log.status !== "Absent") {
+            // Treat "On Time", "Late", "Incomplete", "Leave", "Holiday" as 1 day
+            daysWorked += 1;
+          }
+        });
+        estimatedGrossPay = daysWorked * dailyWage;
       }
+      
+      salaryData = {
+        gross_pay: estimatedGrossPay,
+        net_pay: 0,
+        cutoff_end: currentCutoff.end_date || ""
+      };
     }
   } catch (error) {
-    console.error("Failed to fetch net pay:", error);
+    console.error("Failed to calculate estimated salary data:", error);
   }
 
   // 2. Fetch User to get department_id
@@ -50,7 +86,7 @@ export async function fetchDashboardData() {
     // We assume the id matches because we fetch the list with filter
     const userRes = await fetch(`${API_BASE}/items/user?filter[user_id][_eq]=${userId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" }
+      headers
     });
     if (userRes.ok) {
       const { data } = await userRes.json();
@@ -68,7 +104,7 @@ export async function fetchDashboardData() {
     // Check Oncall
     const oncallListRes = await fetch(`${API_BASE}/items/oncall_list?filter[user_id][_eq]=${userId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" }
+      headers
     });
     
     let hasOncall = false;
@@ -79,7 +115,7 @@ export async function fetchDashboardData() {
         
         const oncallSchedRes = await fetch(`${API_BASE}/items/oncall_schedule/${deptSchedId}`, {
            method: "GET",
-           headers: { "Content-Type": "application/json" }
+           headers
         });
         if (oncallSchedRes.ok) {
           const { data: schedData } = await oncallSchedRes.json();
@@ -99,7 +135,7 @@ export async function fetchDashboardData() {
     if (!hasOncall && departmentId) {
       const deptSchedRes = await fetch(`${API_BASE}/items/department_schedule?filter[department_id][_eq]=${departmentId}&limit=1`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" }
+        headers
       });
       if (deptSchedRes.ok) {
          const { data } = await deptSchedRes.json();
@@ -117,7 +153,7 @@ export async function fetchDashboardData() {
   }
 
   return {
-    netPay,
+    salaryData,
     schedule
   };
 }

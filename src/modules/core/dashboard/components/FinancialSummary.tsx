@@ -3,10 +3,10 @@
 import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { NetPayData } from "../services/dashboard.service";
+import { SalaryData } from "../services/dashboard.service";
 
 interface FinancialSummaryProps {
-  data: NetPayData | null;
+  data: SalaryData | null;
 }
 
 export function FinancialSummary({ data }: FinancialSummaryProps) {
@@ -40,15 +40,15 @@ export function FinancialSummary({ data }: FinancialSummaryProps) {
 
       <div className="relative z-10">
         <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block">
-          Latest Net Pay
+          Estimated Gross Pay
         </label>
         
         <div className="flex items-baseline gap-1">
           <span className="text-5xl font-extrabold tracking-tighter text-zinc-950 dark:text-zinc-50">
-            ₱{data ? Math.floor(data.net_pay).toLocaleString() : "0"}.
+            ₱{data ? Math.floor(data.gross_pay).toLocaleString() : "0"}.
           </span>
           <span className="text-2xl font-bold text-zinc-400 tracking-tighter">
-            {data ? (data.net_pay % 1).toFixed(2).split('.')[1] : "00"}
+            {data ? (data.gross_pay % 1).toFixed(2).split('.')[1] : "00"}
           </span>
         </div>
 

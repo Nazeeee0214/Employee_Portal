@@ -8,14 +8,14 @@ import { WeeklySchedule } from "./components/WeeklySchedule";
 import { LeaveBalances } from "./components/LeaveBalances";
 import { ReceiptText, ShieldCheck, HeartPulse } from "lucide-react";
 
-import { NetPayData, ScheduleData } from "./services/dashboard.service";
+import { SalaryData, ScheduleData } from "./services/dashboard.service";
 
 interface DashboardPageProps {
-  initialNetPay: NetPayData | null;
+  initialSalaryData: SalaryData | null;
   initialSchedule: ScheduleData | null;
 }
 
-export function DashboardPage({ initialNetPay, initialSchedule }: DashboardPageProps) {
+export function DashboardPage({ initialSalaryData, initialSchedule }: DashboardPageProps) {
   return (
     <div className="space-y-10">
       <header>
@@ -37,7 +37,7 @@ export function DashboardPage({ initialNetPay, initialSchedule }: DashboardPageP
       </header>
 
       <div className="grid grid-cols-12 gap-8">
-        <FinancialSummary data={initialNetPay} />
+        <FinancialSummary data={initialSalaryData} />
         <QuickActions />
         
         <WeeklySchedule schedule={initialSchedule} />
